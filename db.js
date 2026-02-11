@@ -231,6 +231,39 @@ function changePassword(userId, newPassword) {
     });
 }
 
+function updateProfile(userId, profileData) {
+    return new Promise((resolve, reject) => {
+        const query = `
+            UPDATE users 
+            SET firstName = ?, lastName = ?, email = ?, phone = ?, 
+                address = ?, city = ?, state = ?, zipcode = ?, country = ?,
+                updatedAt = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `;
+        
+        const params = [
+            profileData.firstName,
+            profileData.lastName,
+            profileData.email,
+            profileData.phone,
+            profileData.address,
+            profileData.city,
+            profileData.state,
+            profileData.zipcode,
+            profileData.country,
+            userId
+        ];
+        
+        db.run(query, params, (err) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
 function getAllUsers() {
     return new Promise((resolve, reject) => {
         const query = `
@@ -320,6 +353,7 @@ module.exports = {
     getUserById,
     updateLastLogin,
     changePassword,
+    updateProfile,
     getAllUsers,
     getLoginHistory,
     recordLoginAttempt,

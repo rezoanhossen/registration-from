@@ -4,7 +4,8 @@ const path = require('path');
 const db = require('./db');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+
 
 // Middleware
 app.use(bodyParser.json());
@@ -270,6 +271,91 @@ app.post('/change-password', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'An error occurred while changing password'
+        });
+    }
+});
+
+// Update profile endpoint
+app.post('/update-profile', async (req, res) => {
+    if (!dbReady) {
+        return res.status(503).json({
+            success: false,
+            message: 'Database not ready. Please try again later.'
+        });
+    }
+
+    const { firstName, lastName, email, phone, address, city, state, zipcode, country } = req.body;
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: 'Unauthorized'
+        });
+    }
+
+    if (!firstName || !lastName || !email || !phone || !address || !city || !state || !zipcode || !country) {
+        return res.status(400).json({
+            success: false,
+            message: 'All fields are required'
+        });
+    }
+
+    try {
+        // Extract userId from token (simple parsing)
+        const tokenParts = token.split('_');
+        if (tokenParts.length < 2 || tokenParts[0] !== 'token') {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid token'
+            });
+        }
+
+        const userId = parseInt(tokenParts[1]);
+        
+        // Get user from database
+        const user = await db.getUserById(userId);
+        
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Check if email is being changed to an existing one (excluding current user)
+        const existingUser = await db.getUserByUsernameOrEmail(email);
+        if (existingUser && existingUser.id !== userId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is already registered'
+            });
+        }
+
+        // Update profile
+        await db.updateProfile(userId, {
+            firstName,
+            lastName,
+            email,
+            phone,
+            address,
+            city,
+            state,
+            zipcode,
+            country
+        });
+
+        console.log(`Profile updated for user ID: ${userId}`);
+
+        res.json({
+            success: true,
+            message: 'Profile updated successfully'
+        });
+    } catch (err) {
+        console.error('Update profile error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'An error occurred while updating profile'
         });
     }
 });

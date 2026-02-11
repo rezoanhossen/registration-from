@@ -7,9 +7,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const forgotPasswordLink = document.getElementById('forgotPasswordLink');
     const logoutBtn = document.getElementById('logoutBtn');
     const changePasswordBtn = document.getElementById('changePasswordBtn');
+    const editProfileBtn = document.getElementById('editProfileBtn');
     const passwordModal = document.getElementById('passwordModal');
-    const forgotPasswordModal = document.getElementById('forgotPasswordModal');
-    const resetPasswordModal = document.getElementById('resetPasswordModal');
+    const editProfileModal = document.getElementById('editProfileModal');
+    const editProfileForm = document.getElementById('editProfileForm');
     const closeModalBtns = document.querySelectorAll('.close-modal');
     const togglePasswordButtons = document.querySelectorAll('.toggle-password');
 
@@ -235,22 +236,180 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Logout
-    logoutBtn.addEventListener('click', function() {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-        sessionStorage.removeItem('authToken');
-        sessionStorage.removeItem('user');
-        
-        showSuccessAlert('You have been logged out. Redirecting...');
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1500);
-    });
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            sessionStorage.removeItem('authToken');
+            sessionStorage.removeItem('user');
+            
+            showSuccessAlert('You have been logged out. Redirecting...');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1500);
+        });
+    }
 
     // Change password button
-    changePasswordBtn.addEventListener('click', function() {
-        passwordModal.style.display = 'flex';
-    });
+    if (changePasswordBtn) {
+        changePasswordBtn.addEventListener('click', function() {
+            passwordModal.style.display = 'flex';
+        });
+    }
+
+    // Edit profile button
+    if (editProfileBtn) {
+        console.log('Edit Profile Button found and attaching click handler');
+        editProfileBtn.addEventListener('click', function() {
+            console.log('Edit Profile Button clicked');
+            if (editProfileModal) {
+                // Populate form with current user data
+                const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+                if (userStr) {
+                    const user = JSON.parse(userStr);
+                    document.getElementById('editFirstName').value = user.firstName;
+                    document.getElementById('editLastName').value = user.lastName;
+                    document.getElementById('editEmail').value = user.email;
+                    document.getElementById('editPhone').value = user.phone;
+                    document.getElementById('editAddress').value = user.address;
+                    document.getElementById('editCity').value = user.city;
+                    document.getElementById('editState').value = user.state;
+                    document.getElementById('editZipcode').value = user.zipcode;
+                    document.getElementById('editCountry').value = user.country;
+                }
+                editProfileModal.style.display = 'flex';
+            }
+        });
+    } else {
+        console.log('Edit Profile Button NOT found');
+    }
+
+    // Edit profile form submission
+    if (editProfileForm) {
+        editProfileForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const firstName = document.getElementById('editFirstName').value.trim();
+            const lastName = document.getElementById('editLastName').value.trim();
+            const email = document.getElementById('editEmail').value.trim();
+            const phone = document.getElementById('editPhone').value.trim();
+            const address = document.getElementById('editAddress').value.trim();
+            const city = document.getElementById('editCity').value.trim();
+            const state = document.getElementById('editState').value.trim();
+            const zipcode = document.getElementById('editZipcode').value.trim();
+            const country = document.getElementById('editCountry').value.trim();
+            
+            clearAllErrors();
+            
+            // Validate
+            let isValid = true;
+            if (!firstName) {
+                showError('editFirstName', 'First name is required');
+                isValid = false;
+            }
+            if (!lastName) {
+                showError('editLastName', 'Last name is required');
+                isValid = false;
+            }
+            if (!email) {
+                showError('editEmail', 'Email is required');
+                isValid = false;
+            } else if (!validateEmail(email)) {
+                showError('editEmail', 'Please enter a valid email address');
+                isValid = false;
+            }
+            if (!phone) {
+                showError('editPhone', 'Phone number is required');
+                isValid = false;
+            }
+            if (!address) {
+                showError('editAddress', 'Address is required');
+                isValid = false;
+            }
+            if (!city) {
+                showError('editCity', 'City is required');
+                isValid = false;
+            }
+            if (!state) {
+                showError('editState', 'State is required');
+                isValid = false;
+            }
+            if (!zipcode) {
+                showError('editZipcode', 'Zip code is required');
+                isValid = false;
+            }
+            if (!country) {
+                showError('editCountry', 'Country is required');
+                isValid = false;
+            }
+            
+            if (!isValid) return;
+            
+            // Get auth token
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+            
+            // Send update profile request
+            fetch('/update-profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    firstName: firstName,
+                    lastName: lastName,
+                    email: email,
+                    phone: phone,
+                    address: address,
+                    city: city,
+                    state: state,
+                    zipcode: zipcode,
+                    country: country
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update user data in storage
+                    const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+                    const user = JSON.parse(userStr);
+                    const updatedUser = {
+                        ...user,
+                        firstName: firstName,
+                        lastName: lastName,
+                        email: email,
+                        phone: phone,
+                        address: address,
+                        city: city,
+                        state: state,
+                        zipcode: zipcode,
+                        country: country
+                    };
+                    
+                    if (localStorage.getItem('user')) {
+                        localStorage.setItem('user', JSON.stringify(updatedUser));
+                    } else {
+                        sessionStorage.setItem('user', JSON.stringify(updatedUser));
+                    }
+                    
+                    // Update dashboard display
+                    displayDashboard(updatedUser);
+                    
+                    showSuccessAlert('Profile updated successfully!');
+                    setTimeout(() => {
+                        editProfileModal.style.display = 'none';
+                        editProfileForm.reset();
+                    }, 1500);
+                } else {
+                    showErrorAlert(data.message || 'Failed to update profile');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorAlert('An error occurred. Please try again.');
+            });
+        });
+    }
 
     // Close modal buttons
     closeModalBtns.forEach(btn => {
@@ -301,8 +460,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Close modal on outside click - Edit Profile Modal
+    if (editProfileModal) {
+        editProfileModal.addEventListener('click', function(e) {
+            if (e.target === editProfileModal) {
+                editProfileModal.style.display = 'none';
+                editProfileForm.reset();
+                clearAllErrors();
+            }
+        });
+    }
+
     // Change password form submission
-    changePasswordForm.addEventListener('submit', function(e) {
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
         const currentPassword = document.getElementById('currentPassword').value;
@@ -365,7 +536,8 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
             showErrorAlert('An error occurred. Please try again.');
         });
-    });
+        });
+    }
 });
 
 // Helper Functions
