@@ -570,7 +570,7 @@ function displayDashboard(user) {
     document.getElementById('fullName').textContent = `${user.firstName} ${user.lastName}`;
     document.getElementById('email').textContent = user.email;
     document.getElementById('phone').textContent = user.phone;
-    document.getElementById('location').textContent = `${user.city}, ${user.state}, ${user.country}`;
+    document.getElementById('location').textContent = `${user.city}, ${user.state} ${user.zipcode}, ${user.country}`;
     document.getElementById('registrationDate').textContent = new Date(user.registrationDate).toLocaleDateString();
 }
 
